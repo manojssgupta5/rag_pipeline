@@ -1,0 +1,23 @@
+# Core
+numpy>=1.24
+tenacity>=8.2
+
+# Optional -- only required by the providers you actually use:
+
+# OpenAI dense embeddings / LLM
+openai>=1.0
+
+# Ollama dense embeddings / LLM (HTTP client only)
+requests>=2.31
+
+# Local sentence-transformers dense embeddings
+sentence-transformers>=2.2
+
+# Qdrant vector store
+qdrant-client>=1.9
+
+# Config files in YAML
+pyyaml>=6.0
+
+# 🆕 Document parsing
+docling>=2.5.2

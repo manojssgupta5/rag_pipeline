@@ -1,0 +1,42 @@
+[
+  {
+    "doc_id": "delivery-policy-v3",
+    "metadata": {"source": "help_center", "region": "dubai_marina", "section": "delivery"},
+    "text": "Free delivery is available on all orders above AED 100 within the Dubai Marina zone. Orders below this threshold incur a flat delivery fee of AED 10. Delivery times during peak hours (12pm-2pm and 7pm-9pm) may be extended by up to 20 minutes due to high demand. Riders are assigned automatically based on proximity and current load."
+  },
+  {
+    "doc_id": "delivery-policy-jbr",
+    "metadata": {"source": "help_center", "region": "jbr", "section": "delivery"},
+    "text": "In the JBR zone, free delivery applies to orders above AED 150. A reduced delivery fee of AED 5 applies to orders between AED 80 and AED 150. Orders below AED 80 incur a flat fee of AED 12. JBR deliveries are not available between 2am and 6am."
+  },
+  {
+    "doc_id": "refund-policy-v2",
+    "metadata": {"source": "help_center", "region": "dubai_marina", "section": "refunds"},
+    "text": "Refunds for cancelled orders are processed within 3-5 business days to the original payment method. If an order arrives damaged or incorrect, customers can request a full refund or replacement through the app within 24 hours of delivery. Refunds for partial order issues are calculated based on the missing or incorrect item value only."
+  },
+  {
+    "doc_id": "account-security-v1",
+    "metadata": {"source": "help_center", "region": "global", "section": "account"},
+    "text": "Two-factor authentication can be enabled from Account Settings under Security. Once enabled, a one-time code is sent via SMS or email for each new device login. If you lose access to your registered phone number, account recovery requires identity verification through the support team, which can take up to 48 hours."
+  },
+  {
+    "doc_id": "order-tracking-v1",
+    "metadata": {"source": "help_center", "region": "global", "section": "tracking"},
+    "text": "Order status updates in real time through the app, progressing through Order Placed, Preparing, Rider Assigned, Picked Up, and Delivered stages. Live rider location is available once the order reaches the Picked Up stage. If tracking does not update for more than 15 minutes, customers can contact support directly from the order screen."
+  },
+  {
+    "doc_id": "merchant-onboarding-v1",
+    "metadata": {"source": "merchant_portal", "region": "global", "section": "onboarding"},
+    "text": "New merchants must submit a valid trade license, bank account details, and a sample menu with pricing before activation. The review process typically takes 5-7 business days. Once approved, merchants gain access to the dashboard for order management, inventory updates, and promotional campaign creation."
+  },
+  {
+    "doc_id": "promo-codes-v1",
+    "metadata": {"source": "help_center", "region": "global", "section": "promotions"},
+    "text": "Promo codes can be applied at checkout and are valid for a single use per account unless otherwise stated. Codes may have minimum order value requirements, expiry dates, or be restricted to specific merchants. Stacking multiple promo codes on a single order is not supported."
+  },
+  {
+    "doc_id": "driver-payouts-v1",
+    "metadata": {"source": "driver_portal", "region": "global", "section": "payouts"},
+    "text": "Driver earnings are calculated daily based on completed deliveries, distance traveled, and applicable peak-hour incentives. Payouts are processed weekly every Monday for the previous Monday-Sunday cycle, directly to the registered bank account. Disputed payouts can be raised through the driver app within 7 days of the payout date."
+  }
+]
