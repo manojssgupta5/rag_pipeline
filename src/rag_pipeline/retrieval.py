@@ -13,6 +13,7 @@ basic hybrid retrieval.
 from __future__ import annotations
 
 import json
+import os
 import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -22,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 Reranker = Callable[[str, List[RetrievedChunk]], List[RetrievedChunk]]
 
+# pyrefly: ignore [missing-import]
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 class RetrievalPipeline:
     def __init__(
@@ -59,21 +63,24 @@ class RetrievalPipeline:
             filters=filters,
         )
 
-        print("\n=== BEFORE RERANK ===")
-        for i, r in enumerate(results, 1):
-            print(
-                f"{i}. score={getattr(r, 'score', None)} "
-                f"text={r.text[:200]}"
-            )
+        if os.getenv("DEBUG_RETRIEVAL") == "true":
+            print("\n=== BEFORE RERANK ===")
+            for i, r in enumerate(results, 1):
+                print(
+                    f"{i}. score={getattr(r, 'score', None)} "
+                    f"text={r.text[:200]}"
+                )
 
         if self._reranker and results:
             results = self._reranker(query, results)
-            print("\n=== AFTER RERANK ===")
-            for i, r in enumerate(results, 1):
-                print(f"\n====================")
-                print(f"Rank {i}")
-                print(f"Score: {r.score}")
-                print(r.text)
+
+            if os.getenv("DEBUG_RETRIEVAL") == "true":
+                print("\n=== AFTER RERANK ===")
+                for i, r in enumerate(results, 1):
+                    print(f"\n====================")
+                    print(f"Rank {i}")
+                    print(f"Score: {r.score}")
+                    print(r.text)
 
         return results[:top_k]
 
@@ -81,21 +88,53 @@ class SelfQueryRetriever:
     """Wraps a RetrievalPipeline to automatically extract filters from natural language queries."""
 
     _PROMPT = """You are a query constructor for a vector search engine.
-Given a user query, extract the core semantic search query and any applicable metadata filters.
-The allowed metadata fields are: 'year' (integer), 'domain' (string), 'paper' (string), 'source' (string).
+                 Given a user query, extract the core semantic search query and any applicable metadata filters.
 
-Return ONLY valid JSON in this format:
-{{
-    "search_query": "the core search phrase",
-    "filters": {{
-        "year": 2017
-    }}
-}}
-If no filters apply, return an empty dictionary for filters.
+                 <START OF METADATA FIELD DEFINITIONS>
+                 Allowed metadata fields are: 'year' (integer), 'domain' (string), 'paper' (string), 'source' (string).
 
-User query:
-"{query}"
-"""
+                 User Query Analysis Rules:
+
+                 - **year**: Extract the year of the paper. If the user mentions a year (e.g., "in 2017", "published in 2017"), 
+                           extract it. If no year is mentioned, return null.
+
+                 - **domain**: Extract the domain of the paper. Common domains include:
+                             - "Artificial Intelligence"
+                             - "Machine Learning"
+                             - "Natural Language Processing"
+                             - "Computer Vision"
+                             - "Reinforcement Learning"
+                             - "Systems"
+                             - "Theory"
+                             - "other" (if it doesn't match any of these)
+
+                 - **paper**: Extract the name of the paper. Common papers include:
+                            - "Attention Is All You Need"
+                            - "BERT"
+                            - "ResNet"
+                            - "Generative Pre-trained Transformer 2 (GPT-2)"
+                            - "YOLO"
+                            - "other" (if it doesn't match any of these)
+
+                 - **source**: Extract the source of the paper. Common sources include:
+                             - "arXiv"
+                             - "journal"
+                             - "conference"
+                             - "other" (if it doesn't match any of these)
+                 <END OF METADATA FIELD DEFINITIONS>
+
+                 Return ONLY valid JSON in this format:
+                 {{
+                     "search_query": "the core search phrase",
+                     "filters": {{
+                         "year": 2017
+                     }}
+                 }}
+                 If no filters apply, return an empty dictionary for filters.
+
+                 User query:
+                 "{query}"
+                 """
 
     def __init__(self, retriever: RetrievalPipeline, llm: LLMProvider):
         self._retriever = retriever

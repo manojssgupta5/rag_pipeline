@@ -15,11 +15,12 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+
 from rag_pipeline import build_pipelines
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 logging.basicConfig(level=logging.INFO)
 

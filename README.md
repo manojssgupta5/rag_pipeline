@@ -142,7 +142,7 @@ ollama pull llama3:8b
 ## Usage
 
 ```python
-from rag.config import build_pipelines
+from rag_pipeline import build_pipelines
 
 ingestion, retrieval = build_pipelines()
 
@@ -172,6 +172,66 @@ Self-Query bypasses filter extraction when `filters` is explicitly passed.
 
 ---
 
+## Recommended Production File Structure
+
+The current repository is intentionally compact, but for production use it is easier to maintain when the code is split by responsibility:
+
+```text
+rag_pipeline/
+├── pyproject.toml
+├── README.md
+├── .env.example
+├── requirements.txt
+├── src/
+│   └── rag_pipeline/
+│       ├── __init__.py
+│       ├── config.py
+│       ├── orchestrator.py
+│       ├── ingestion.py
+│       ├── retrieval.py
+│       ├── base.py
+│       ├── providers/
+│       │   ├── __init__.py
+│       │   ├── embeddings.py
+│       │   ├── llm.py
+│       │   ├── reranker.py
+│       │   ├── sparse.py
+│       │   ├── vector_store.py
+│       │   └── docling_parser.py
+│       ├── models/
+│       │   ├── __init__.py
+│       ├── utils/
+│       │   └── __init__.py
+├── tests/
+│   ├── test_ingestion.py
+│   ├── test_retrieval.py
+│   ├── test_orchestrator.py
+│   └── fixtures/
+├── examples/
+│   └── example_usage.py
+└── data/
+    ├── sample.pdf
+    └── test_dataset.json
+```
+
+Why this works well in production:
+
+1. `src/` prevents accidental imports from the repository root and matches standard packaging practice.
+2. `ingestion/` and `retrieval/` separate pipeline concerns into smaller, testable modules.
+3. `models/` keeps dataclasses and shared schema isolated from workflow logic.
+4. `tests/` cleanly separates unit tests, integration tests, and smoke tests.
+5. `examples/` keeps runnable demos out of the importable library surface.
+6. `data/` keeps sample assets and evaluation datasets away from source code.
+
+If you want to evolve the current layout incrementally, a good first pass is:
+
+1. Move runnable scripts into `examples/`.
+2. Add a `tests/` directory with unit and integration coverage.
+3. Introduce a `pyproject.toml` for packaging, formatting, and test tooling.
+4. Split `ingestion.py` and `retrieval.py` into package directories once each grows beyond a single responsibility.
+
+---
+
 ## Self-Query Filter Fields
 
 LLM extracts these from natural language queries automatically:
@@ -196,20 +256,33 @@ No changes to `ingestion.py` or `retrieval.py`.
 
 ---
 
-## File Map
+## Current File Map
 
 ```
+README.md
+requirements.txt
+example_usage.py
+run_test_dataset.py
+test_pipeline_smoke.py
+test_dataset.json
+sample.pdf
+parsed_documents/
+rag_pipeline/
+  __init__.py
+  base.py
+  config.py
+  ingestion.py
+  retrieval.py
+  orchestrator.py
+  providers/
+    __init__.py
+    docling_parser.py
+    embeddings.py
+    llm.py
+    reranker.py
+    sparse.py
+    vector_store.py
 providers/
-  embeddings.py      OpenAI, Ollama, SentenceTransformer dense embedders
-  sparse.py          HashingTF sparse embedder (BM25-style)
-  llm.py             OpenAI, Ollama LLM providers
-  vector_store.py    Qdrant vector store
-  reranker.py        CrossEncoder reranker
-  docling_parser.py  Plain + Docling document parsers
-base.py              ABCs + data models (Chunk, RetrievedChunk)
-ingestion.py         IngestionPipeline, chunker, enricher, HyDE generator
-retrieval.py         RetrievalPipeline, SelfQueryRetriever, AnswerSynthesizer
-config.py            Factory functions, build_pipelines()
 ```
 
 ---

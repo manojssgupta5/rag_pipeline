@@ -28,11 +28,21 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import os
+# pyrefly: ignore [missing-import]
+from dotenv import load_dotenv
+load_dotenv(override=True)
+
+SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
+
 from rag_pipeline import build_pipelines
+from rag_pipeline import build_orchestrated_pipelines    
 
 TEST_QUERIES = [
-#{"query": "what architecture replaces recurrent networks", "filters": {"section": "introduction"}},
-{"query": "what is the transformer model based on", "filters": {"section": "abstract"}},
+# {"query": "what architecture replaces recurrent networks", "filters": {"section": "introduction"}},
+# {"query": "what is the transformer model based on", "filters": {"section": "abstract"}},
 # {"query": "what bleu score did transformer achieve on english to german", "filters": {"section": "results"}},
 # {"query": "how many gpus were used for training", "filters": {"section": "training"}},
 # {"query": "why recurrent models are hard to parallelize", "filters": {"section": "introduction"}},
@@ -50,7 +60,7 @@ TEST_QUERIES = [
 # {"query": "what warmup steps were used during training", "filters": {"section": "optimizer"}},
 # {"query": "what dropout rate was used in base model", "filters": {"section": "regularization"}},
 # {"query": "what is label smoothing value", "filters": {"section": "regularization"}},
-# {"query": "what bleu score did transformer big achieve", "filters": {"section": "results"}},
+{"query": "what bleu score did transformer big achieve", "filters": {"section": "results"}},
 ]
 
 def main() -> None:
@@ -58,9 +68,12 @@ def main() -> None:
     print("Building pipelines from .env")
     print("=" * 80)
 
-    ingestion, retrieval = build_pipelines()
-
-    print("\n✓ Pipelines initialized")
+    if os.getenv("ORCHESTRATOR_ENABLE") == "true":
+        ingestion, retrieval, orchestrator = build_orchestrated_pipelines()
+        print("\n✓ Orchestrated Pipelines initialized")
+    else:
+        ingestion, retrieval = build_pipelines()
+        print("\n✓ Basic Pipelines initialized")
 
     if len(sys.argv) >= 2:
         pdf_path = Path(sys.argv[1])
@@ -101,11 +114,11 @@ def main() -> None:
         print(f"Query   : {query}")
         print(f"Filters : {filters}")
 
-        if hasattr(retrieval, "ask"):
-            response = retrieval.ask(query=query, top_k=3)
-            results = response.get("chunks", [])
-            answer = response.get("answer", "")
-            
+        if orchestrator:    
+            result = orchestrator.ask(query=query, top_k=3)
+            results = result.chunks
+            answer = result.answer
+
             print(f"\n  🤖 Synthesized Answer:\n    {answer}")
             print("\n  📚 Top Source Context:")
         else:
@@ -116,16 +129,16 @@ def main() -> None:
             continue
 
         success += 1
-
-        for rank, r in enumerate(results, start=1):
-            preview = r.text.replace("\n", " ")[:180]
-            print(
-                f"\n  Rank #{rank}"
-                f"\n    score       : {r.score:.4f}"
-                f"\n    matched_via : {r.matched_via}"
-                f"\n    chunk_id    : {r.chunk_id}"
-                f"\n    text        : {preview}..."
-        )
+        if ingestion._debug:
+            for rank, r in enumerate(results, start=1):
+                preview = r.text.replace("\n", " ")[:180]
+                print(
+                    f"\n  Rank #{rank}"
+                    f"\n    score       : {r.score:.4f}"
+                    f"\n    matched_via : {r.matched_via}"
+                    f"\n    chunk_id    : {r.chunk_id}"
+                    f"\n    text        : {preview}..."
+            )
 
     print("\n" + "=" * 80)
     print("Summary")

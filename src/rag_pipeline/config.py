@@ -26,6 +26,7 @@ from .ingestion import (
 )
 from .providers.docling_parser import DocumentParser, DoclingDocumentParser, PlainTextDocumentParser
 from .retrieval import RetrievalPipeline, SelfQueryRetriever, AnswerSynthesizer
+from .orchestrator import Orchestrator, OrchestratorConfig
 
 load_dotenv()
 
@@ -228,3 +229,67 @@ def build_pipelines() -> Tuple[IngestionPipeline, Any]:
         retrieval = AnswerSynthesizer(retriever=retrieval, llm=llm)
 
     return ingestion, retrieval
+
+
+# --------------------------------------------------------------------------- #
+# Orchestrator assembly
+# --------------------------------------------------------------------------- #
+def build_orchestrator(base_retrieval: RetrievalPipeline) -> Optional[Orchestrator]:
+    """Build an Orchestrator wrapping *base_retrieval* (a bare RetrievalPipeline).
+
+    Returns None when ORCHESTRATOR_ENABLE=false or no LLM is configured.
+    """
+    enable = _get_bool(os.environ.get("ORCHESTRATOR_ENABLE", "false"), False)
+    if not enable:
+        return None
+
+    llm = build_llm()
+    if llm is None:
+        return None
+
+    config = OrchestratorConfig(
+        max_retries=int(os.environ.get("ORCHESTRATOR_MAX_RETRIES", "2")),
+        top_k=int(os.environ.get("ORCHESTRATOR_TOP_K", "5")),
+        enable_decomposition=_get_bool(
+            os.environ.get("ENABLE_QUERY_DECOMPOSITION", "true"), True
+        ),
+        enable_verification=_get_bool(
+            os.environ.get("ENABLE_ANSWER_VERIFICATION", "true"), True
+        ),
+        verification_confidence_threshold=float(
+            os.environ.get("VERIFICATION_CONFIDENCE_THRESHOLD", "0.6")
+        ),
+    )
+    return Orchestrator(retrieval=base_retrieval, llm=llm, config=config)
+
+
+def build_orchestrated_pipelines():
+    """Build (IngestionPipeline, retrieval, Optional[Orchestrator]).
+
+    ``retrieval`` is the full stack with SelfQueryRetriever / AnswerSynthesizer
+    applied. The ``Orchestrator`` wraps a separate bare ``RetrievalPipeline``
+    (before self-query wrapping) because the IntentAgent handles query
+    understanding itself.
+
+    Callers choose whichever interface fits:
+      - Simple:       retrieval.retrieve(query) / retrieval.ask(query)
+      - Orchestrated: orchestrator.ask(query)  (if not None)
+    """
+    ingestion, retrieval = build_pipelines()
+
+    # Re-use already-built providers to build a bare retrieval pipeline
+    # for the orchestrator (shares the same embedder + vector store instances).
+    dense_embedder  = build_dense_embedder()
+    sparse_embedder = build_sparse_embedder()
+    vector_store    = build_vector_store(dense_dim=dense_embedder.dimension)
+    reranker        = build_reranker()
+
+    base_retrieval = RetrievalPipeline(
+        dense_embedder=dense_embedder,
+        sparse_embedder=sparse_embedder,
+        vector_store=vector_store,
+        reranker=reranker,
+    )
+
+    orchestrator = build_orchestrator(base_retrieval)
+    return ingestion, retrieval, orchestrator

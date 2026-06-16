@@ -355,18 +355,53 @@ class DoclingDocumentParser(DocumentParser):
 # --------------------------------------------------------------------------- #
 class PlainTextDocumentParser(DocumentParser):
     """Used when the input is already plain text (or for unit tests where
-    you don't want the Docling dependency)."""
+    you don't want the Docling dependency).
+
+    This parser intentionally does NOT support binary formats such as PDF,
+    DOCX, PPTX, etc.  For those, set ``DOCUMENT_PARSER_PROVIDER=docling``
+    in your ``.env`` file.
+    """
+
+    # File extensions that are binary formats and cannot be read as text.
+    _BINARY_EXTENSIONS = {
+        "pdf", "docx", "doc", "pptx", "ppt", "xlsx", "xls",
+        "odt", "ods", "odp", "rtf", "epub",
+    }
 
     def parse(self, source: Union[str, Path, bytes]) -> ParsedDocument:
         if isinstance(source, (str, Path)):
             path = Path(source)
             if not path.exists():
                 raise FileNotFoundError(f"Document not found: {path}")
-            text = path.read_text(encoding="utf-8")
-            fmt = path.suffix.lstrip(".").lower() or "txt"
+
+            ext = path.suffix.lstrip(".").lower()
+            if ext in self._BINARY_EXTENSIONS:
+                raise ValueError(
+                    f"PlainTextDocumentParser cannot read binary file '{path.name}' "
+                    f"(format: .{ext}).\n"
+                    f"  → Set DOCUMENT_PARSER_PROVIDER=docling in your .env file to "
+                    f"parse PDFs, DOCX, PPTX and other rich formats."
+                )
+
+            # Try UTF-8 first; fall back to latin-1 for legacy plain-text files.
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                logger.warning(
+                    "File %s is not valid UTF-8 — retrying with latin-1 encoding", path
+                )
+                text = path.read_text(encoding="latin-1")
+
+            fmt = ext or "txt"
+
         elif isinstance(source, bytes):
-            text = source.decode("utf-8")
+            try:
+                text = source.decode("utf-8")
+            except UnicodeDecodeError:
+                logger.warning("Bytes source is not valid UTF-8 — retrying with latin-1")
+                text = source.decode("latin-1")
             fmt = "txt"
+
         else:
             raise TypeError(f"Unsupported source type: {type(source).__name__}")
 

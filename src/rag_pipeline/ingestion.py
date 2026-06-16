@@ -20,16 +20,23 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+import os
+# pyrefly: ignore [missing-import]
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 from .base import Chunk, DenseEmbedder, LLMProvider, SparseEmbedder, VectorStore
 from .providers.docling_parser import DocumentParser, ParsedDocument, PlainTextDocumentParser
 
 logger = logging.getLogger(__name__)
 
+load_dotenv(override=True)
 
 # --------------------------------------------------------------------------- #
 # Chunking
@@ -421,8 +428,8 @@ Passage:
                 raw = self._llm.generate(prompt, max_tokens=self._config.max_tokens, temperature=0.3)
                 questions = self._parse(raw)
                 chunk.hypothetical_questions = questions[: self._config.questions_per_chunk]
-                # if idx % 10 == 0:  # Print every 10 chunks or if debug enabled
-                #     print(f"   → Generated {len(questions)} questions for chunk {idx+1}/{len(chunks)}: {questions}")
+                if (os.getenv("DEBUG_INGESTION") == "true") and (idx % 5 == 0):
+                    print(f"   → Generated {len(questions)} questions for chunk {idx+1}/{len(chunks)}: {questions}")
             except Exception:
                 logger.exception("Hypothetical question generation failed for chunk %s", chunk.id)
                 chunk.hypothetical_questions = []
@@ -618,8 +625,8 @@ class IngestionPipeline:
 
         # Step 4 & 5 — embed and store
         print(f"   → Embedding and storing {len(chunks)} chunks...")
-        for c in chunks[:3]:
-            print(c.metadata)
+        # for c in chunks[:3]:
+        #     print(c.metadata)
         try:
             self._embed_and_store(chunks)
             print(f"   ✅ Embedded and stored")
